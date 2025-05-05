@@ -1,0 +1,12 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "name": "Admin User",
+      "username": "admin",
+      "password": "admin",
+      "role": "admin",
+      "avatar": "https://images.pexels.com/photos/2379005/pexels-photo-2379005.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=1"
+    }
+  ]
+}

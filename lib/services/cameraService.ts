@@ -40,11 +40,11 @@ export const AVAILABLE_FILTERS = [
 
 /**
  * Fetches all cameras from the backend API
- * GET /api/v1/cameras/
+ * GET /api/v1/contextual/cameras
  */
 export const fetchCameras = async (): Promise<Camera[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/cameras/`);
+    const response = await fetch(`${API_BASE_URL}/contextual/cameras`);
     if (!response.ok) {
       throw new Error(`Error: ${response.status}`);
     }

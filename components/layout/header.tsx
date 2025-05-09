@@ -27,12 +27,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useNotifications } from '@/lib/hooks/use-notifications';
 import { useGeneralSettings } from '@/hooks/use-general-settings';
 import { motion } from 'framer-motion';
+import Link from 'next/link'; // Import Link
 
 export default function Header() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { notifications, clearNotification, markAllAsRead } = useNotifications();
+  const { notifications, clearNotification, markAllAsRead, markAsRead } = useNotifications(); // Replaced removeNotification with clearNotification
   const unreadCount = notifications.filter(n => !n.read).length;
   const { systemName } = useGeneralSettings();
 
@@ -47,6 +48,23 @@ export default function Header() {
       .map(part => part[0])
       .join('')
       .toUpperCase();
+  };
+
+  const getNotificationDotColor = (type: string) => {
+    switch (type) {
+      case 'success':
+        return 'bg-green-500';
+      case 'info':
+        return 'bg-blue-500';
+      case 'warning':
+        return 'bg-yellow-500';
+      case 'error':
+        return 'bg-red-500';
+      case 'alert':
+        return 'bg-orange-500';
+      default:
+        return 'bg-gray-400';
+    }
   };
 
   return (
@@ -114,40 +132,50 @@ export default function Header() {
                 <div className="flex items-center justify-between p-3 border-b">
                   <h4 className="font-medium">Notifications</h4>
                   <div className="flex gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={markAllAsRead} 
-                      disabled={!notifications.length}
-                    >
-                      Mark all read
-                    </Button>
+                    {unreadCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={markAllAsRead}
+                        disabled={unreadCount === 0}
+                      >
+                        Mark all read
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <div className="max-h-[300px] overflow-y-auto">
                   {notifications.length > 0 ? (
                     <div>
-                      {notifications.map((notification, index) => (
-                        <motion.div 
+                      {notifications.slice(0, 5).map((notification, index) => ( // Displaying latest 5
+                        <motion.div
                           key={notification.id}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: index * 0.05, duration: 0.2 }}
-                          className={`flex items-start gap-3 p-3 hover:bg-muted/50 border-b last:border-0 transition ${!notification.read ? 'bg-muted/30' : ''}`}
+                          className={`flex items-start gap-3 p-3 hover:bg-muted/50 border-b last:border-0 transition ${!notification.read ? 'bg-muted/30 dark:bg-muted/20' : 'dark:hover:bg-muted/30'}`}
+                          onClick={() => {
+                            if (!notification.read) markAsRead(notification.id);
+                            if (notification.link) router.push(notification.link);
+                          }}
+                          style={{ cursor: notification.link || !notification.read ? 'pointer' : 'default' }}
                         >
-                          <div className={`h-2 w-2 mt-2 rounded-full flex-shrink-0 ${notification.type === 'alert' ? 'bg-destructive' : notification.type === 'warning' ? 'bg-amber-500' : 'bg-primary'}`} />
-                          <div className="flex-1 flex flex-col gap-1">
+                          <div className={`h-2.5 w-2.5 mt-1.5 rounded-full flex-shrink-0 ${getNotificationDotColor(notification.type)}`} />
+                          <div className="flex-1 flex flex-col gap-0.5">
                             <span className="text-sm font-medium">{notification.title}</span>
                             <span className="text-xs text-muted-foreground">{notification.message}</span>
-                            <span className="text-xs text-muted-foreground">{notification.time}</span>
+                            <span className="text-xs text-muted-foreground/80">{new Date(notification.timestamp).toLocaleString()}</span>
                           </div>
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
-                            className="h-6 w-6"
-                            onClick={() => clearNotification(notification.id)}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent click on parent
+                              clearNotification(notification.id);
+                            }}
                           >
-                            <X className="h-3 w-3" />
+                            <X className="h-4 w-4" />
                           </Button>
                         </motion.div>
                       ))}
@@ -158,6 +186,15 @@ export default function Header() {
                     </div>
                   )}
                 </div>
+                {notifications.length > 0 && (
+                  <div className="p-2 border-t text-center">
+                    <Link href="/dashboard/notifications" passHref>
+                      <Button variant="link" size="sm" className="w-full">
+                        View all notifications
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </PopoverContent>
             </Popover>
             

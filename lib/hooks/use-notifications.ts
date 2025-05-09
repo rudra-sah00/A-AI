@@ -4,40 +4,7 @@ import { useState, useEffect } from 'react';
 import { Notification } from '@/lib/types';
 
 // Mock notifications
-const initialNotifications: Notification[] = [
-  {
-    id: 'notif-001',
-    title: 'Unauthorized Access',
-    message: 'Attempt detected at Entrance Gate',
-    time: '10 minutes ago',
-    type: 'alert',
-    read: false
-  },
-  {
-    id: 'notif-002',
-    title: 'Camera Offline',
-    message: 'Hallway West camera disconnected',
-    time: '2 hours ago',
-    type: 'warning',
-    read: false
-  },
-  {
-    id: 'notif-003',
-    title: 'Storage Warning',
-    message: 'Primary storage at 68% capacity',
-    time: '3 hours ago',
-    type: 'warning',
-    read: true
-  },
-  {
-    id: 'notif-004',
-    title: 'System Update',
-    message: 'AI engine update available (v3.3.0)',
-    time: '1 day ago',
-    type: 'info',
-    read: true
-  }
-];
+const initialNotifications: Notification[] = [];
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);

@@ -110,11 +110,15 @@ export type HealthStatus = {
   };
 };
 
+export type NotificationType = 'alert' | 'warning' | 'info' | 'success' | 'error';
+
 export type Notification = {
   id: string;
   title: string;
   message: string;
-  time: string;
-  type: 'info' | 'warning' | 'alert';
+  timestamp: string; // ISO string for dates
+  type: NotificationType;
   read: boolean;
+  imageUrl?: string;
+  link?: string; // Optional link for navigation on click
 };

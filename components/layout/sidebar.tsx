@@ -16,6 +16,7 @@ import {
   Shield,
   BrainCircuit,
   FlaskConical, // Added for Test icon
+  Bell, // Added for Notifications icon
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import {
@@ -54,6 +55,11 @@ export default function Sidebar() {
       title: 'Dashboard',
       href: '/dashboard',
       icon: <LayoutDashboard className="w-5 h-5" />,
+    },
+    {
+      title: 'Notifications', // New Notifications menu item
+      href: '/dashboard/notifications',
+      icon: <Bell className="w-5 h-5" />,
     },
     {
       title: 'Cameras',

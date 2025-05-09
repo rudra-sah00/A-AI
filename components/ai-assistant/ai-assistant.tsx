@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Camera, fetchCameras } from '@/lib/services/cameraService';
 import { 
   submitQuery, 
-  checkQueryStatus
+  // checkQueryStatus // Removed as it's no longer used
 } from '@/lib/services/aiAssistantService';
 
 interface Message {
@@ -88,7 +88,8 @@ export default function AiAssistant() {
       return;
     }
 
-    if (!query.trim()) {
+    const currentQuery = query.trim(); // Capture query before clearing
+    if (!currentQuery) {
       toast({
         title: 'Error',
         description: 'Please enter a query.',
@@ -97,131 +98,98 @@ export default function AiAssistant() {
       return;
     }
 
-    const messageId = `query-${Date.now()}`;
-    
+    const userMessageId = `user-${Date.now()}`;
+    const assistantMessageId = `assistant-${Date.now()}`;
+
     // Add user message
     setMessages(prev => [
       ...prev,
       {
-        id: messageId,
+        id: userMessageId,
         role: 'user',
-        content: query,
+        content: currentQuery,
         timestamp: new Date(),
         status: 'sending'
       }
     ]);
 
-    setQuery("");
+    setQuery(""); // Clear input field
     setIsProcessingQuery(true);
+
+    // Add assistant message placeholder (status: 'processing')
+    setMessages(prev => [
+      ...prev,
+      {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: 'Processing your query...',
+        timestamp: new Date(),
+        status: 'processing'
+      }
+    ]);
 
     try {
       // Submit query to API
-      const response = await submitQuery({
+      const apiResponse = await submitQuery({
         camera_id: selectedCamera,
-        query: query.trim()
+        query: currentQuery
       });
 
-      // Add assistant message placeholder
-      const assistantMessageId = `assistant-${Date.now()}`;
-      setMessages(prev => [
-        ...prev,
-        {
-          id: assistantMessageId,
-          role: 'assistant',
-          content: response.status === 'completed' 
-            ? response.response || 'Processing complete.'
-            : 'Processing your query...',
-          timestamp: new Date(),
-          status: response.status === 'completed' ? 'complete' : 'processing',
-          image_base64: response.image_base64
-        }
-      ]);
-
-      // Update message status
+      // Update user message status to 'complete'
       setMessages(prev => prev.map(msg => 
-        msg.id === messageId ? { ...msg, status: 'complete' } : msg
+        msg.id === userMessageId ? { ...msg, status: 'complete' } : msg
       ));
 
-      // If query is still processing, poll for updates
-      if (response.status === 'processing') {
-        pollQueryStatus(response.query_id, selectedCamera, assistantMessageId);
-      }
-    } catch (error) {
-      console.error('Failed to send query:', error);
-      
-      // Update message status to error
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId ? { ...msg, status: 'error' } : msg
-      ));
-
-      // Add error message
-      setMessages(prev => [
-        ...prev,
-        {
-          id: `error-${Date.now()}`,
-          role: 'system',
-          content: 'Failed to process your query. Please try again.',
-          timestamp: new Date(),
-          status: 'error'
-        }
-      ]);
-
-      toast({
-        title: 'Error',
-        description: 'Failed to process your query. Please try again.',
-        variant: 'destructive',
-      });
-      
-      setIsProcessingQuery(false);
-    }
-  };
-
-  // Function to poll for query status
-  const pollQueryStatus = async (queryId: string, cameraId: string, messageId: string) => {
-    try {
-      const response = await checkQueryStatus(queryId, cameraId);
-
-      if (response.status === 'completed') {
-        // Update assistant message with response
+      if (apiResponse.success) {
+        // Update assistant message with successful response
         setMessages(prev => prev.map(msg => 
-          msg.id === messageId ? { 
+          msg.id === assistantMessageId ? { 
             ...msg, 
-            content: response.response || 'No response from AI.', 
+            content: apiResponse.response || 'AI processed the request but returned no specific text.',
             status: 'complete',
-            image_base64: response.image_base64
+            image_base64: apiResponse.image_base64 // Handles if image_base64 is present or not
           } : msg
         ));
-        
-        setIsProcessingQuery(false);
-      } else if (response.status === 'processing') {
-        // Continue polling after delay
-        setTimeout(() => {
-          pollQueryStatus(queryId, cameraId, messageId);
-        }, 2000); // Poll every 2 seconds
       } else {
-        // Query not found or other error
+        // Update assistant message with error from API response
+        const errorMessage = apiResponse.error || 'An unknown error occurred during AI processing.';
         setMessages(prev => prev.map(msg => 
-          msg.id === messageId ? { 
+          msg.id === assistantMessageId ? { 
             ...msg, 
-            content: 'Query processing failed.', 
+            content: errorMessage, 
             status: 'error' 
           } : msg
         ));
-        
-        setIsProcessingQuery(false);
+        toast({
+          title: 'AI Processing Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
       }
     } catch (error) {
-      console.error('Failed to check query status:', error);
-      
-      // Update assistant message with error
+      console.error('Failed to send query:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to connect to the AI service or an unexpected error occurred.';
+
+      // Update user message status to 'error'
       setMessages(prev => prev.map(msg => 
-        msg.id === messageId ? { 
+        msg.id === userMessageId ? { ...msg, status: 'error' } : msg
+      ));
+
+      // Update assistant message with the error
+      setMessages(prev => prev.map(msg => 
+        msg.id === assistantMessageId ? { 
           ...msg, 
-          content: 'Failed to get response. Please try again.', 
+          content: `Error: ${errorMessage}`,
           status: 'error' 
         } : msg
       ));
-      
+
+      toast({
+        title: 'Query Submission Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
       setIsProcessingQuery(false);
     }
   };
@@ -295,7 +263,7 @@ export default function AiAssistant() {
                     {formatTimestamp(message.timestamp)}
                   </span>
                 </div>
-                <div>
+                <div className="whitespace-pre-wrap"> {/* Added whitespace-pre-wrap here */}
                   {message.content}
                   {message.status === 'processing' && (
                     <span className="ml-2 inline-flex">
